@@ -2,24 +2,48 @@
 
 namespace App\Models;
 
-class Post
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Post extends Model
 {
-    private static $blog_posts = [
-        [
-            "title" => "Judul Blog Pertama",
-            "slug" => "judul-blog-pertama",
-            "body" => "Lorem ipsum dolor sit amet consectetur adipisicing elit. Nam obcaecati totam quam saepe repellendus nesciunt, tenetur esse laudantium commodi fuga alias reiciendis dolor cupiditate, culpa non porro eum consectetur assumenda delectus itaque, dignissimos recusandae. Quos, amet iure? Saepe accusantium illum enim dolor? Animi quam adipisci voluptatem. Dolore enim architecto amet sequi possimus tempora doloremque consequuntur incidunt natus, quidem repellat repudiandae quasi saepe omnis? Aperiam veniam, eveniet numquam perspiciatis omnis quam voluptas magnam, ipsam eaque vitae consequatur voluptates dolores rerum atque voluptate at recusandae corrupti impedit obcaecati nesciunt doloribus minima earum eligendi iste? Reprehenderit labore corporis ratione atque quibusdam blanditiis eaque."
-        ],
-        [
-            "title" => "Judul Blog Kedua",
-            "slug" => "judul-blog-kedua",
-            "body" => "Lorem ipsum dolor sit amet consectetur adipisicing elit. Nam obcaecati totam quam saepe repellendus nesciunt, tenetur esse laudantium commodi fuga alias reiciendis dolor cupiditate, culpa non porro eum consectetur assumenda delectus itaque, dignissimos recusandae. Quos, amet iure? Saepe accusantium illum enim dolor? Animi quam adipisci voluptatem. Dolore enim architecto amet sequi possimus tempora doloremque consequuntur incidunt natus, quidem repellat repudiandae quasi saepe omnis? Aperiam veniam, eveniet numquam perspiciatis omnis quam voluptas magnam, ipsam eaque vitae consequatur voluptates dolores rerum atque voluptate at recusandae corrupti impedit obcaecati nesciunt doloribus minima earum eligendi iste? Reprehenderit labore corporis ratione atque quibusdam blanditiis eaque."
-        ]
-    ];
+    use HasFactory;
 
+    protected $guarded = ['id'];
+    protected $with = ['category', 'author'];
 
-    public static function all()
+    public function scopeFilter($query, array $filters)
     {
-        return self::$blog_posts;
+
+        $query->when($filters['search'] ?? false, function($query, $search) {
+            return $query->where('title', 'like', '%' . $search . '%')
+                        ->orWhere('body', 'like', '%' . $search . '%');
+        });
+
+        $query->when($filter['category'] ?? false, function($query, $category) {
+            return $query->whereHas('category', function($query) use ($category) {
+                $query->where('slug', $category);
+            });
+        });
+
+        $query->when($filters['author'] ?? false, fn($query, $author) => 
+            $query->whereHas('author', fn($query) =>
+                $query->where('username', $author)
+            )
+        );
+
+    }
+ 
+    public function category(){
+        return $this->belongsTo(Category::class);
+    }
+
+    public function author(){
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'slug';
     }
 }
